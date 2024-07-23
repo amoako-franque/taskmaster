@@ -1,0 +1,42 @@
+# SKILLED PLATFORM API DOCUMENTATION
+
+## USERS
+- [ ] users [customers and skilled workers]
+- [ ] managers [ Admin and super admin]
+- [ ] build profile
+- [ ] verification data/ documents
+- [ ] login and register and logout
+- [ ] forgot password
+- [ ] reset password
+
+
+## Setup
+  - after cloning run `npm install` at the root of the folder to install packages
+  - create a branch and checkout into the branch and work there.
+  - create .env file and fill the fields below
+> SERVER URL : http://localhost:4789
+> You can change the port
+
+### Environment variables
+    PORT =  4789
+    NODE_ENV=development
+    MONGODB_URL=
+    JWT_ACCESS_SECRET_KEY=
+    JWT_REFRESH_SECRET_KEY=
+    SENDER_EMAIL=support@taskmanager.com
+    DOMAIN_URL=http://localhost:4789
+    CLIENT_DOMAIN_URL=http://localhost:3000
+
+
+
+    # send emails using nodemailer
+    NODEMAILER_HOST=""
+    USER_MAIL_ID=""
+    USER_SECRET=""
+
+
+
+    # cloudinary images and files uploads
+    CLOUDINARY_CLOUD_NAME=""
+    CLOUDINARY_API_KEY=""
+    CLOUDINARY_API_SECRET=""
