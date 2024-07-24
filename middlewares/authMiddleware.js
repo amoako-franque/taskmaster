@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler")
 const jwt = require("jsonwebtoken")
-const User = require("../models/userModel")
+const User = require("../models/user/userModel")
 
 const access_token = process.env.JWT_ACCESS_SECRET_KEY
 
