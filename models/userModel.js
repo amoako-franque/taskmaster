@@ -27,7 +27,7 @@ const userSchema = new Schema(
 			],
 		},
 		username: {
-			type: string,
+			type: String,
 			required: true,
 			unique: true,
 			trim: true,
@@ -74,10 +74,10 @@ const userSchema = new Schema(
 		country: { type: String, default: "Ghana" },
 		passwordChangedAt: Date,
 		roles: {
-			type: String,
+			type: [String],
 			default: ["USER"],
 			enum: ["USER", "SKILLED", "ADMIN", "SUPER ADMIN"],
-		},
+		  },
 
 		refreshToken: [String],
 	},
