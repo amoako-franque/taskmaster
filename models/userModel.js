@@ -66,20 +66,20 @@ const userSchema = new Schema(
 			trim: true,
 			required: true,
 		},
-		address: String,
-		city: String,
-		bio: {
-			type: String,
-		},
-		country: { type: String, default: "Ghana" },
 		passwordChangedAt: Date,
-		roles: {
+		role: {
 			type: [String],
 			default: ["USER"],
 			enum: ["USER", "SKILLED", "ADMIN", "SUPER ADMIN"],
 		  },
 
 		refreshToken: [String],
+		otpCode: {
+			type: String
+		},
+		otpCodeExpires: {
+			type: Date
+		}
 	},
 	{ timestamps: true }
 )

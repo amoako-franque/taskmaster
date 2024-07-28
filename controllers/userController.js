@@ -2,10 +2,11 @@ const user =  require ('../models/userModel')
 const expressAsyncHandler = require("express-async-handler")
 const bcrypt = require ('bcrypt')
 const jwt = require('jsonwebtoken')
+const Profile = require('../models/userProfile')
 
 
 exports.userRegister = expressAsyncHandler(async (req,res) => {
-    const { firstname, lastname, username, email, password, phoneNumber, address, city, bio, country,roles } = req.body;
+    const { firstname, lastname, username, email, password, phoneNumber,role } = req.body;
 
     try{
         const hashedPassword = await bcrypt.hash(password,10)
@@ -24,11 +25,7 @@ exports.userRegister = expressAsyncHandler(async (req,res) => {
             email,
             password: hashedPassword,
             phoneNumber,
-            address,
-            city,
-            bio,
-            country,
-            roles
+            role
         });
 
        const successful = await newUser.save()
@@ -66,7 +63,7 @@ exports.userLogin = expressAsyncHandler(async (req,res) =>{
             return res.status(401).json({msg:"Wrong password"})
         }
 
-        const token = jwt.sign({userId :user._id},process.env.JWT_ACCESS_SECRET_KEY,{expiresIn:'4000s'})
+        const token = jwt.sign({id:userExist.id}, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '4000s' });
 
         res.status(200).json({
             msg:"Login success",
@@ -94,4 +91,98 @@ exports.userLogout = expressAsyncHandler(async (req,res) => {
     }
 })
 
-exports.resetP
+
+
+exports.userProfile = expressAsyncHandler (async (req,res) =>{
+
+    const userId = req.auth.id
+       if (!req.auth) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+    const {bio, address,city,country}=req.body
+
+    try{
+
+        const profile = new Profile({
+            userId,
+            bio,
+            address,
+            city,
+            country
+        })
+
+        const createProfile = await profile.save()
+
+        res.status(200).json({msg:"Profile created successfully",createProfile})
+
+    }catch(error){
+        console.log(error)
+        res.status(500).json({msg:"Server error",error})
+    }
+})
+
+exports.updateProfile = expressAsyncHandler(async (req,res) =>{
+    const userId = req.auth.id
+
+    if (!req.auth) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const { bio, address, city, country } = req.body;
+
+    try {
+   
+        const profile = await Profile.findOne({userId });
+
+        if (!profile) {
+            return res.status(404).json({ msg: "Profile not found" });
+        }
+
+        
+        if (bio) profile.bio = bio;
+        if (address) profile.address = address;
+        if (city) profile.city = city;
+        if (country) profile.country = country;
+
+        const updatedProfile = await profile.save();
+
+        res.status(200).json({ msg: "Profile updated successfully", updatedProfile });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: "error updating profile", error });
+    }
+
+})
+
+exports.resetPassword = expressAsyncHandler (async (req,res) => {
+    const userId = req.auth.id
+   const {otpCode,newPassword}=req.body
+
+   try{
+    if(!otpCode || !newPassword ){
+        return res.status(400).json({msg:"Provide otp code and new password"})
+    }
+
+    const user = req.auth
+    if (user.otpCode !== otpCode || user.otpCodeExpires < Date.now()) {
+        return res.status(400).json({ message: 'Invalid or expired OTP code' });
+      }
+    
+    const hashedPassword = await bcrypt.hash(newPassword,10)
+
+    user.password = hashedPassword;
+    user.otpCode = undefined;
+    user.otpCodeExpires = undefined;
+
+    await user.save();
+
+    return res.status(200).json({ message: 'Password reset successful' });
+
+
+   }catch(error){
+    console.error(error)
+    res.status(500).json({msg:"Internal server error", error})
+   }
+})
+

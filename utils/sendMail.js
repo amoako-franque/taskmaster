@@ -21,9 +21,9 @@ const sendMail = async (data) => {
 		html: data.html,
 		attachments: data.attachments,
 	})
-	// res.status(200).json({
-	// 	message: "Email sent successfully",
-	// })
+	res.status(200).json({
+		message: "Email sent successfully",
+	})
 }
 
 module.exports = sendMail

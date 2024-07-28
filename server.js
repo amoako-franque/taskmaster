@@ -36,16 +36,15 @@ app.get("/", (req, res) => {
 	res.send("hello from simple server :)")
 })
 
-try {
-	
+try {	
 	fs.readdirSync(path.join(__dirname, "routes")).map((file) => {
 		const userRoute = require(`./routes/userRoutes`)
 		app.use("/api/v1",userRoute)
 	})
-	
 } catch (error) {
 	console.error("Error loading routes:", error);
 }
+
 app.use(notFound)
 app.use(errorHandler)
 

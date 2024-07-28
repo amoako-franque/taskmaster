@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler")
 const jwt = require("jsonwebtoken")
-const User = require("../models/user/userModel")
+const User = require("../models/userModel")
 
 const access_token = process.env.JWT_ACCESS_SECRET_KEY
 
@@ -8,6 +8,7 @@ const requireSignIn = asyncHandler(async (req, res, next) => {
 	try {
 		const authHeader = req.headers.authorization || req.headers.Authorization
 		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+			console.log("Authorization header missing or invalid");
 			return res
 				.status(401)
 				.json({ message: "Invalid token. Login to continue..." })
@@ -16,15 +17,20 @@ const requireSignIn = asyncHandler(async (req, res, next) => {
 		if (authHeader && authHeader.startsWith("Bearer ")) {
 			const token = authHeader.split(" ")[1] // Bearer token
 			jwt.verify(token, access_token, async (err, decoded) => {
-				if (err) return res.sendStatus(403)
-
+				if (err){
+					console.log("Token verification failed", err);
+					return res.sendStatus(403)
+				} 
+				
 				const userId = decoded.id
 				const user = await User.findById(userId)
 				if (!user) {
+					console.log("User not found")
 					return res.status(401).json({ message: "User not found" })
 				}
 
 				req.auth = user
+				console.log("User authenticated:", user)
 				next()
 			})
 		} else {
