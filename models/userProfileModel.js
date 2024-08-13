@@ -26,7 +26,11 @@ const profileSchema = new Schema(
             type: String,
             default: "Ghana",
             required: true
-        }
+        },
+        avatar:{
+            type: String,
+            required :true
+        } 
     },
     {
         timestamps: true

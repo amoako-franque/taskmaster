@@ -1,12 +1,12 @@
 # SKILLED PLATFORM API DOCUMENTATION
 
 ## USERS
-- [ ] users [customers and skilled workers]
+- [ ✅] users [customers and skilled workers]
 - [ ] managers [ Admin and super admin]
-- [ ] build profile
+- [ ✅] build profile
 - [ ] verification data/ documents
 - [✅] login and register and logout
-- [ ] forgot password
+- [ ✅] forgot password
 - [ ] reset password
 
 

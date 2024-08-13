@@ -30,7 +30,6 @@ const requireSignIn = asyncHandler(async (req, res, next) => {
 				}
 
 				req.auth = user
-				console.log("User authenticated:", user)
 				next()
 			})
 		} else {

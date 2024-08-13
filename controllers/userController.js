@@ -2,7 +2,8 @@ const user =  require ('../models/userModel')
 const expressAsyncHandler = require("express-async-handler")
 const bcrypt = require ('bcrypt')
 const jwt = require('jsonwebtoken')
-const Profile = require('../models/userProfile')
+const Profile = require('../models/userProfileModel')
+const systemLogs = require('../middlewares/logger')
 
 
 exports.userRegister = expressAsyncHandler(async (req,res) => {
@@ -11,10 +12,9 @@ exports.userRegister = expressAsyncHandler(async (req,res) => {
     try{
         const hashedPassword = await bcrypt.hash(password,10)
 
-        const alreadyExist = await user.findOne ({username})
-        const existingEmail = await user.findOne ({email})
-
-        if(alreadyExist || existingEmail){
+        const alreadyExist = await user.findOne ({$or:[{username},{email}]})
+     
+        if(alreadyExist){
             return res.status(400).json({msg:"User already exist! log in"})
         }
 
@@ -63,11 +63,18 @@ exports.userLogin = expressAsyncHandler(async (req,res) =>{
             return res.status(401).json({msg:"Wrong password"})
         }
 
-        const token = jwt.sign({id:userExist.id}, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '4000s' });
+        const accessToken = jwt.sign({id:userExist.id}, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '4000s' })
+
+        // const refreshToken = jwt.sign({ id: userExist.id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '7d' })
+
+        // userExist.refreshToken.push(refreshToken)
+        // await userExist.save()
+
 
         res.status(200).json({
             msg:"Login success",
-            token})
+            accessToken,
+            })
 
     }catch(error){
         console.error(error)
@@ -100,6 +107,7 @@ exports.userProfile = expressAsyncHandler (async (req,res) =>{
         return res.status(401).json({ success: false, message: 'Authentication required' });
     }
     const {bio, address,city,country}=req.body
+    const avatar = req.file ? req.file.path : null
 
     try{
 
@@ -108,7 +116,8 @@ exports.userProfile = expressAsyncHandler (async (req,res) =>{
             bio,
             address,
             city,
-            country
+            country,
+            avatar
         })
 
         const createProfile = await profile.save()
@@ -125,10 +134,12 @@ exports.updateProfile = expressAsyncHandler(async (req,res) =>{
     const userId = req.auth.id
 
     if (!req.auth) {
+        systemLogs.error('Authentication required')
         return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
     const { bio, address, city, country } = req.body;
+    const avatar = req.file ? req.file.path : null
 
     try {
    
@@ -143,6 +154,9 @@ exports.updateProfile = expressAsyncHandler(async (req,res) =>{
         if (address) profile.address = address;
         if (city) profile.city = city;
         if (country) profile.country = country;
+        if (avatar) {
+            profile.avatar = avatar; 
+        }
 
         const updatedProfile = await profile.save();
 
@@ -164,18 +178,19 @@ exports.resetPassword = expressAsyncHandler (async (req,res) => {
         return res.status(400).json({msg:"Provide otp code and new password"})
     }
 
-    const user = req.auth
-    if (user.otpCode !== otpCode || user.otpCodeExpires < Date.now()) {
+    const existingUser = await user.findById(userId)
+    if (existingUser.otpCode !== otpCode || existingUser.otpCodeExpires < Date.now()) {
         return res.status(400).json({ message: 'Invalid or expired OTP code' });
       }
+
     
     const hashedPassword = await bcrypt.hash(newPassword,10)
 
-    user.password = hashedPassword;
-    user.otpCode = undefined;
-    user.otpCodeExpires = undefined;
+    existingUser.password = hashedPassword;
+    existingUser.otpCode = undefined;
+    existingUser.otpCodeExpires = undefined;
 
-    await user.save();
+    await existingUser.save();
 
     return res.status(200).json({ message: 'Password reset successful' });
 
@@ -186,3 +201,39 @@ exports.resetPassword = expressAsyncHandler (async (req,res) => {
    }
 })
 
+
+exports.forgotPassword =expressAsyncHandler(async(req,res)=>{
+    const {newPassword,otpCode}=req.body
+
+    try{
+        if (!otpCode) {
+            return res.status(400).json({ msg: "Provide an OTP code" });
+          }
+      
+          const existingUser = await user.findOne({ otpCode });
+      
+          if (!existingUser) {
+            return res.status(404).json({ msg: "User not found" });
+          }
+      
+          if (existingUser.otpCodeExpires < Date.now()) {
+            return res.status(400).json({ message: 'OTP code has expired' });
+          }
+      
+        const hashedPassword = await bcrypt.hash(newPassword,10)
+
+        existingUser.password = hashedPassword
+        existingUser.otpCode = undefined
+        existingUser.otpCodeExpires = undefined
+    
+        await existingUser.save()
+    
+        return res.status(200).json({ message: 'Password reset successful' })
+    
+    
+    }catch(error){
+        console.error(error)
+        res.status(500).json({msg:"Internal server error", error})
+    }
+
+})
