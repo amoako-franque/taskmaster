@@ -1,12 +1,19 @@
 const fs = require("fs")
 const multer = require("multer")
 const path = require("path")
+const cloudinary = require('cloudinary').v2
+
+cloudinary.config({
+    cloud_name:process.env.CLOUD_NAME,
+    api_key:process.env.CLOUD_KEY,
+    api_secret:process.env.CLOUD_SECRET
+})
 
 if (!fs.existsSync("./uploads")) {
 	fs.mkdirSync("./uploads")
 }
 
-const storage = multer.diskStorage({
+const storage = multer.memoryStorage({
 	destination: function (req, file, cb) {
 		cb(null, "./uploads")
 	},
@@ -51,4 +58,34 @@ const upload = multer({
 	},
 })
 
-module.exports = upload
+const uploadCloud = async (req, res, next) => {
+    try {
+        const file = req.file;
+        if(!file){
+            return res.status(400).json({msg:"No file uploaded"})
+        }
+
+        const stream = cloudinary.uploader.upload_stream(
+            {
+                resource_type: "auto",
+                folder: "uploads",
+            },
+            (error, result) => {
+                if (result) {
+                    req.cloudinaryUrl = result.secure_url;
+                    next();
+                } else {
+                    console.error(error);
+                    res.status(500).json({ msg: "Error uploading file to Cloudinary" });
+                }
+            }
+        );
+        stream.end(file.buffer);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json('Error uploading file to cloudinary');
+    }
+};
+
+
+module.exports = {upload,uploadCloud}

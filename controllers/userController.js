@@ -107,9 +107,15 @@ exports.userProfile = expressAsyncHandler (async (req,res) =>{
         return res.status(401).json({ success: false, message: 'Authentication required' });
     }
     const {bio, address,city,country}=req.body
-    const avatar = req.file ? req.file.path : null
+    const avatar = req.cloudinaryUrl
+   
 
     try{
+        const existingProfile = await Profile.findOne({ userId });
+
+        if (existingProfile) {
+            return res.status(400).json({ msg: "Profile already exists for this user." });
+        }
 
         const profile = new Profile({
             userId,
@@ -121,6 +127,10 @@ exports.userProfile = expressAsyncHandler (async (req,res) =>{
         })
 
         const createProfile = await profile.save()
+        if(createProfile){
+            createProfile.isProfile =true
+        }
+        await createProfile.save()
 
         res.status(200).json({msg:"Profile created successfully",createProfile})
 
@@ -139,7 +149,7 @@ exports.updateProfile = expressAsyncHandler(async (req,res) =>{
     }
 
     const { bio, address, city, country } = req.body;
-    const avatar = req.file ? req.file.path : null
+    const avatar = req.cloudinaryUrl
 
     try {
    

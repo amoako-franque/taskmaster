@@ -30,7 +30,12 @@ const profileSchema = new Schema(
         avatar:{
             type: String,
             required :true
-        } 
+        },
+        isProfile:{
+            type:Boolean,
+            default:false
+        }
+
     },
     {
         timestamps: true

@@ -69,8 +69,8 @@ const userSchema = new Schema(
 		passwordChangedAt: Date,
 		role: {
 			type: [String],
-			default: ["USER"],
-			enum: ["USER", "SKILLED", "ADMIN", "SUPER ADMIN"],
+			default: ["CLIENT"],
+			enum: ["CLIENT", "SKILLED", "ADMIN", "SUPER ADMIN"],
 		  },
 
 		refreshToken: [String],
