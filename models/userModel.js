@@ -72,8 +72,11 @@ const userSchema = new Schema(
 			default: ["CLIENT"],
 			enum: ["CLIENT", "SKILLED", "ADMIN", "SUPER ADMIN"],
 		  },
+		
+		
 
 		refreshToken: [String],
+		accessToken :[String],
 		otpCode: {
 			type: String
 		},

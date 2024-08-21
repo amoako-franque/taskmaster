@@ -8,7 +8,7 @@ const userRoute = express.Router();
 //Registration and login and logout
 userRoute.post('/user-register', userRegister)
 userRoute.post('/user-login',userLogin)
-userRoute.post('/logout',userLogout)
+userRoute.post('/logout',requireSignIn,userLogout)
 userRoute.post('/reset-password',requireSignIn,resetPassword)
 
 userRoute.post('/forgot-password',forgotPassword)

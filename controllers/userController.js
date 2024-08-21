@@ -4,6 +4,8 @@ const bcrypt = require ('bcrypt')
 const jwt = require('jsonwebtoken')
 const Profile = require('../models/userProfileModel')
 const systemLogs = require('../middlewares/logger')
+const { access } = require('fs')
+const tokenBlacklist =require('../models/tokenBlacklistModel')
 
 
 exports.userRegister = expressAsyncHandler(async (req,res) => {
@@ -65,15 +67,16 @@ exports.userLogin = expressAsyncHandler(async (req,res) =>{
 
         const accessToken = jwt.sign({id:userExist.id}, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '4000s' })
 
-        // const refreshToken = jwt.sign({ id: userExist.id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '7d' })
+        const refreshToken = jwt.sign({ id: userExist.id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '7d' })
 
-        // userExist.refreshToken.push(refreshToken)
-        // await userExist.save()
-
+        userExist.accessToken.push(accessToken)
+        userExist.refreshToken.push(refreshToken)
+        await userExist.save()
 
         res.status(200).json({
             msg:"Login success",
             accessToken,
+            refreshToken
             })
 
     }catch(error){
@@ -86,9 +89,36 @@ exports.userLogout = expressAsyncHandler(async (req,res) => {
     try{
         const token = req.headers.authorization?.split(' ')[1]
 
-        if(token){
-            console.log(`Token ${token} added to blacklist`)
+        if(!token){
+            return res.status(401).json({msg:"Access token required"})
         }
+
+        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET_KEY)
+        const userId = decoded.id
+
+        const loggedUser= await  user.findById(userId)
+        if (!loggedUser){
+            return res.status(404).json({ msg: "User not found" })
+        }
+
+        loggedUser.accessToken = loggedUser.accessToken.filter(at => at !== token);
+
+        if(req.body.refreshToken){
+            loggedUser.refreshToken = loggedUser.refreshToken.filter(rt => rt !== req.body.refreshToken)
+        } else{
+            loggedUser.refreshToken =[]
+        }
+        await loggedUser.save()
+
+        const decodedToken = jwt.decode(token)
+        const expiresAt = new Date(decodedToken.exp * 1000)
+
+        const blacklistedToken = new tokenBlacklist({
+            token,
+            expiresAt
+        });
+
+        await blacklistedToken.save()
 
         res.status(200).json({msg:"Log out successful"})
 
@@ -97,7 +127,6 @@ exports.userLogout = expressAsyncHandler(async (req,res) => {
         res.status(500).json({msg:"Error logging out",error})
     }
 })
-
 
 
 exports.userProfile = expressAsyncHandler (async (req,res) =>{
@@ -181,24 +210,20 @@ exports.updateProfile = expressAsyncHandler(async (req,res) =>{
 
 exports.resetPassword = expressAsyncHandler (async (req,res) => {
     const userId = req.auth.id
-   const {otpCode,newPassword}=req.body
+   const {newPassword}=req.body
 
    try{
-    if(!otpCode || !newPassword ){
-        return res.status(400).json({msg:"Provide otp code and new password"})
+    if( !newPassword ){
+        return res.status(400).json({msg:"Provide new password"})
     }
 
     const existingUser = await user.findById(userId)
-    if (existingUser.otpCode !== otpCode || existingUser.otpCodeExpires < Date.now()) {
-        return res.status(400).json({ message: 'Invalid or expired OTP code' });
-      }
+   
 
     
     const hashedPassword = await bcrypt.hash(newPassword,10)
 
     existingUser.password = hashedPassword;
-    existingUser.otpCode = undefined;
-    existingUser.otpCodeExpires = undefined;
 
     await existingUser.save();
 
