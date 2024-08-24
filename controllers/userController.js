@@ -6,6 +6,8 @@ const Profile = require('../models/userProfileModel')
 const systemLogs = require('../middlewares/logger')
 const { access } = require('fs')
 const tokenBlacklist =require('../models/tokenBlacklistModel')
+const Job =require('../models/jobModel')
+const Bid = require ('../models/bidModel')
 
 
 exports.userRegister = expressAsyncHandler(async (req,res) => {
@@ -271,4 +273,64 @@ exports.forgotPassword =expressAsyncHandler(async(req,res)=>{
         res.status(500).json({msg:"Internal server error", error})
     }
 
+})
+
+exports.createJob = expressAsyncHandler(async(req,res)=>{
+    const {jobDescription,minPrice,maxPrice,location}=req.body
+
+    try{
+
+        const newJob = new Job({
+            jobDescription,
+            minPrice,
+            maxPrice,
+            location,
+            createdBy: req.auth.username
+        })
+
+        const savedJob = await newJob.save();
+
+        res.status(201).json({ msg: "Job created successfully", job: savedJob })
+
+    }catch(error){
+        console.error(error)
+        res.status(500).json({msg:'Internal server error'})
+    }
+
+})
+
+exports.submitBid = expressAsyncHandler(async(req,res)=>{
+    const {jobId,bidAmount}=req.body
+    const bidder = req.auth.username
+    const userRole =req.auth.role
+
+    try{
+        const job = await Job.findById(jobId)
+        if (!job) {
+            return res.status(404).json({ msg: "Job not found" })
+        }
+
+        if (job.createdBy === bidder) {
+            return res.status(403).json({ msg: "You cannot bid on your own job" })
+        }
+
+        if (!userRole.includes("SKILLED")) {
+            return res.status(403).json({ msg: "Only skilled workers can bid on jobs" })
+          }
+
+
+        const newBid = new Bid({
+            jobId,
+            bidder,
+            bidAmount
+        })
+
+        const savedBid = await newBid.save()
+
+        res.status(201).json({ msg: "Bid submitted successfully", bid: savedBid })
+
+    }catch(error){
+        console.error(error)
+        res.status(500).json({msg:"Internal server error"})
+    }
 })
