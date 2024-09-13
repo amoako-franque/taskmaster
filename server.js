@@ -18,6 +18,7 @@ app.use("/uploads", express.static(path.join(__dirname, "/uploads")))
 
 db_connection()
 
+
 if (process.env.NODE_ENV === "development") {
 	app.use(morgan("dev"))
 }
@@ -31,6 +32,8 @@ app.use(mongoSanitize())
 app.use(morganMiddleware)
 
 app.use(express.static("public"))
+
+
 
 app.get("/", (req, res) => {
 	res.send("hello from simple server :)")
@@ -47,6 +50,10 @@ try {
 
 app.use(notFound)
 app.use(errorHandler)
+
+// token cleanup process
+const setTokenCleanUp = require('./utils/cleanTokens');
+setTokenCleanUp();
 
 app.listen(port, () => {
 	console.log(`> Server is up and running on port :  http://localhost:${port} `)

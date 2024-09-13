@@ -1,24 +1,22 @@
-const tokenBlacklist = require("../models/tokenBlacklistModel");
+const cron = require('node-cron');
+const tokenBlacklist = require('../models/tokenBlacklistModel');
 
-const cleanUpExpiredTokens = async () => {
-    try {
-        await tokenBlacklist.deleteMany({ expiresAt: { $lt: new Date() } })
-        console.log('Expired tokens cleaned up');
-    } catch (error) {
-        console.error('Error cleaning up expired tokens:', error)
-    }
-};
+const setTokenCleanUp = () => {
+    cron.schedule('*/3 * * * *', async () => { // Run every 3 minutes
+        try {
+            const now = new Date();
+            console.log('Token cleanup started at (UTC):', now.toUTCString());
+            
+            const result = await tokenBlacklist.deleteMany({ expiresAt: { $lt: now } });
+            console.log(`Expired blacklisted tokens deleted: ${result.deletedCount}`);
+        } catch (error) {
+            console.error("Error deleting blacklisted tokens:", error.message);
+        }
+    });
 
+    console.log('Token cleanup scheduled');
+}
 
-// setInterval(cleanUpExpiredTokens, 24 * 60 * 60 * 1000)
-setInterval(cleanUpExpiredTokens, 5 * 60 * 1000)
-
-
-
-
-
-
-
-
+module.exports = setTokenCleanUp;
 
 

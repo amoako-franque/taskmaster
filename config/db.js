@@ -16,7 +16,6 @@ const db_connection = async () => {
 			"Connection to MongoDB is established",
 			mongoose.connection.host
 		)
-		// if connection fail we show/ send user an error message
 	} catch (error) {
 		console.log("Connection to MongoDB failed")
 		console.log({ error })
