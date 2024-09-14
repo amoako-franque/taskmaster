@@ -14,8 +14,9 @@ const setTokenCleanUp = () => {
         }
     });
 
-    console.log('Token cleanup scheduled');
+    
 }
+
 
 module.exports = setTokenCleanUp;
 

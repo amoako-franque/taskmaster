@@ -1,5 +1,5 @@
 const express = require('express');
-const { userRegister, userLogin, userLogout, userProfile, updateProfile, resetPassword, forgotPassword, createJob, submitBid, getAllJobs } = require('../controllers/userController');
+const { userRegister, userLogin, userLogout, userProfile, updateProfile, resetPassword, forgotPassword, createJob, submitBid } = require('../controllers/userController');
 const { requireSignIn } = require('../middlewares/authMiddleware');
 const { sendOtp } = require('../utils/sendCode');
 const { upload, uploadCloud } = require('../middlewares/multer');
@@ -22,7 +22,6 @@ userRoute.patch('/user-profile-update',requireSignIn,upload.single('avatar'),upl
 //job Creation
 userRoute.post ('/create-job',requireSignIn,createJob)
 userRoute.post('/submit-bid',requireSignIn,submitBid)
-userRoute.get('/all-jobs',getAllJobs)
 
 
 

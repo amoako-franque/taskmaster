@@ -8,15 +8,7 @@ const { access } = require('fs')
 const tokenBlacklist =require('../models/tokenBlacklistModel')
 const Job =require('../models/jobModel')
 const Bid = require ('../models/bidModel')
-const rateLimit = require('express-rate-limit');
-const { generateTokens } = require('../utils/tokenUtils');
 
-// Rate limiter for login attempts
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: 'Too many login attempts, please try again later.'
-});
 
 exports.userRegister = expressAsyncHandler(async (req,res) => {
     const { firstname, lastname, username, email, password, phoneNumber,role } = req.body;
@@ -53,68 +45,47 @@ exports.userRegister = expressAsyncHandler(async (req,res) => {
 })
 
 
-exports.userLogin = [
-  loginLimiter,
-  expressAsyncHandler(async (req, res) => {
-    const { username, email, password } = req.body;
+exports.userLogin = expressAsyncHandler(async (req,res) =>{
+    const {username,email,password} = req.body
 
-    try {
-      // Input validation
-      if ((!username && !email) || !password) {
-        return res.status(400).json({ msg: "Please provide email/username and password" });
-      }
+    try{
+        if(!username && !email){
+            return res.status(400).json({msg:"Provide email or username"})
+        }
 
-      // Find user
-      const userExist = await user.findOne({ $or: [{ username }, { email }] });
-      if (!userExist) {
-        systemLogs.warn(`Login attempt for non-existent user: ${username || email}`);
-        return res.status(404).json({ msg: "User not found. Please sign up." });
-      }
+        if(!password){
+            return res.status(400).json({msg:"provide password!"})
+        }
+        const userExist = await user.findOne({$or:[{username},{email}]})
 
-      // Password verification
-      const correctPassword = await bcrypt.compare(password, userExist.password);
-      if (!correctPassword) {
-        systemLogs.warn(`Failed login attempt for user: ${userExist.username}`);
-        return res.status(401).json({ msg: "Invalid credentials" });
-      }
+        if(!userExist){
+            return res.status(400).json({msg:"User not found! sign up"})
+        }
+        const correctPassword = await bcrypt.compare(password,userExist.password)
 
-      // Generate tokens
-      const { accessToken, refreshToken } = generateTokens(userExist);
+        if(!correctPassword){
+            return res.status(401).json({msg:"Wrong password"})
+        }
 
-      // Update user's tokens and last login
-      await user.findByIdAndUpdate(userExist._id, {
-        $push: { accessToken, refreshToken },
-        lastLogin: new Date()
-      });
+        const accessToken = jwt.sign({id:userExist.id}, process.env.JWT_ACCESS_SECRET_KEY, { expiresIn: '4000s' })
 
-      // Set refresh token in HTTP-only cookie
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-      });
+        const refreshToken = jwt.sign({ id: userExist.id }, process.env.JWT_REFRESH_SECRET_KEY, { expiresIn: '7d' })
 
-      systemLogs.info(`User logged in: ${userExist.username}`);
+        userExist.accessToken.push(accessToken)
+        userExist.refreshToken.push(refreshToken)
+        await userExist.save()
 
-      res.status(200).json({
-        msg: "Login successful",
-        user: {
-          id: userExist._id,
-          username: userExist.username,
-          email: userExist.email,
-          role: userExist.role
-        },
-        accessToken
-      });
+        res.status(200).json({
+            msg:"Login success",
+            accessToken,
+            refreshToken
+            })
 
-    } catch (error) {
-      systemLogs.error(`Login error: ${error.message}`);
-      res.status(500).json({ msg: "Server error", error: error.message });
+    }catch(error){
+        console.error(error)
+        res.status(500).json({msg:"Server error",error})
     }
-  })
-];
-
+})
 
 exports.userLogout = expressAsyncHandler(async (req,res) => {
     try{
@@ -128,11 +99,10 @@ exports.userLogout = expressAsyncHandler(async (req,res) => {
         const userId = decoded.id
 
         const loggedUser= await  user.findById(userId)
-        // if (!loggedUser){
-        //     return res.status(404).json({ msg: "User not found" })
-        // }
+        if (!loggedUser){
+            return res.status(404).json({ msg: "User not found" })
+        }
 
-        
         loggedUser.accessToken = loggedUser.accessToken.filter(at => at !== token);
 
         if(req.body.refreshToken){
@@ -144,7 +114,6 @@ exports.userLogout = expressAsyncHandler(async (req,res) => {
 
         const decodedToken = jwt.decode(token)
         const expiresAt = new Date(decodedToken.exp * 1000)
-        console.log('Token expiration time (UTC):', expiresAt.toUTCString())
 
         const blacklistedToken = new tokenBlacklist({
             token,
@@ -330,21 +299,6 @@ exports.createJob = expressAsyncHandler(async(req,res)=>{
 
 })
 
-
-exports.getAllJobs =expressAsyncHandler(async(req,res)=>{
-    try {
-       
-        const jobs = await Job.find();
-
-        res.status(200).json(jobs);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-    }
-
-}
-
-) 
 exports.submitBid = expressAsyncHandler(async(req,res)=>{
     const {jobId,bidAmount}=req.body
     const bidder = req.auth.username
